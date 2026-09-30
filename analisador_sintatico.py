@@ -45,13 +45,11 @@ class ErroSintatico(Exception):
         super().__init__(f"Linha {linha}: esperava {esperado}, encontrou '{encontrado}'")
 
 
-# Símbolos que representam um tipo de dado válido
 TIPOS = {
     "C_INTEGER_TIPO", "C_REAL_TIPO", "C_STRING_TIPO",
     "C_BOOLEAN_TIPO", "C_CHAR_TIPO", "C_IDENT",
 }
 
-# Operadores relacionais (usados em comparações)
 OP_RELACIONAL = {
     "C_IGUAL", "C_DIFERENTE", "C_MENOR", "C_MAIOR",
     "C_MENOR_IGUAL", "C_MAIOR_IGUAL",
@@ -63,7 +61,6 @@ OP_SOMA = {"C_MAIS", "C_MENOS", "C_OR"}
 # Operadores de multiplicação (precedência mais alta)
 OP_MULT = {"C_MULTIPLICACAO", "C_DIVISAO", "C_DIV", "C_MOD", "C_AND"}
 
-# Símbolos que podem iniciar um comando
 INICIO_COMANDO = {
     "C_IDENT", "C_BEGIN", "C_IF", "C_WHILE", "C_FOR",
     "C_REPEAT", "C_CASE", "C_WRITE", "C_WRITELN", "C_READ",
@@ -82,37 +79,28 @@ ROTINAS = {
 
 
 class Parser:
-    # Analisador sintático descendente recursivo.
-    # Para cada regra da gramática existe uma função, que chama as
-    # funções das sub-regras. É o mesmo princípio do autômato, só que
-    # em vez de estados de letras, os "estados" são as regras gramaticais.
+    # Analisador sintático descendente recursivo: cada regra da gramática
+    # tem uma função, que chama as funções das sub-regras.
 
     def __init__(self, tokens):
-        # NAO filtramos os tokens de erro lexico: eles continuam no fluxo,
-        # ocupando o lugar exato onde estavam (um numero mal formado ainda
-        # esta na posicao de um numero). Se filtrassemos, "abriria um buraco"
-        # na expressao e o parser ia reportar erro sintatico em cascata por
-        # causa de UM erro lexico so. Quem reporta o problema lexico em si
-        # e o analisador lexico (self.erros_lexicos abaixo); o sintatico so
-        # "engole" o token quieto pra nao quebrar o resto da analise.
+        # Os tokens de erro léxico continuam no fluxo, ocupando o lugar onde estavam.
+        # Assim, um único erro léxico não gera erros sintáticos em cascata.
+        # Quem reporta o erro léxico é o analisador léxico; o sintático só o ignora.
         self.tokens = tokens
         self.erros_lexicos = [t for t in tokens if t[2].startswith("C_ERRO")]
         self.pos = 0
         self.erros = []
 
     def atual(self):
-        # token atual, ou um marcador de fim de arquivo
         if self.pos < len(self.tokens):
             return self.tokens[self.pos]
         ultima_linha = self.tokens[-1][0] if self.tokens else 0
         return (ultima_linha, "<fim do arquivo>", "C_EOF")
 
     def simbolo(self):
-        # categoria (símbolo) do token atual
         return self.atual()[2]
 
     def avancar(self):
-        # consome o token atual e devolve ele
         tok = self.atual()
         self.pos += 1
         return tok
@@ -121,7 +109,7 @@ class Parser:
         return self.simbolo() in simbolos
 
     def consumir(self, simbolo, descricao):
-        # exige que o token atual seja "simbolo"; se não for, registra erro
+        # Exige o símbolo esperado; se não for, registra o erro
         if self.simbolo() == simbolo:
             return self.avancar()
         linha, atomo, _ = self.atual()
@@ -130,19 +118,14 @@ class Parser:
         raise erro
 
     def sincronizar(self, *ate):
-        # recuperação de erro: pula tokens até um ponto seguro pra
-        # continuar a análise (evita um erro virar 50 em cascata)
+        # Recuperação de erro: pula tokens até um ponto seguro para continuar a análise.
         alvos = set(ate) | {"C_PONTO_E_VIRGULA", "C_END", "C_EOF"}
         while self.simbolo() not in alvos:
             self.avancar()
 
     def pular_erro_lexico_solto(self):
-        # engole silenciosamente qualquer token que o LEXICO ja marcou
-        # como invalido e que sobrou "perdido" entre uma expressao e o
-        # que vem depois dela (ex: caractere estranho tipo '#'/'@' onde
-        # se esperava um operador ou o fim do comando). O problema ja
-        # foi contabilizado como erro lexico; aqui so evitamos que ele
-        # derrube o resto da analise sintatica em cascata.
+        # Ignora tokens que o léxico já marcou como inválidos (ex.: '#'), pois esse erro
+        # já foi contado no léxico e não deve causar erros sintáticos em cascata.
         while self.simbolo().startswith("C_ERRO"):
             self.avancar()
 
@@ -192,7 +175,7 @@ class Parser:
 
     def secao_const(self):
         # secao_const -> CONST {ident (':' tipo)? '=' valor ';'}
-        self.avancar()  # consome CONST
+        self.avancar()
         while self.verificar("C_IDENT"):
             try:
                 self.avancar()
@@ -209,7 +192,7 @@ class Parser:
 
     def secao_type(self):
         # secao_type -> TYPE {ident '=' tipo ';'}
-        self.avancar()  # consome TYPE
+        self.avancar()
         while self.verificar("C_IDENT"):
             try:
                 self.avancar()
@@ -223,7 +206,7 @@ class Parser:
 
     def secao_var(self):
         # secao_var -> VAR {lista_ident ':' tipo ';'}
-        self.avancar()  # consome VAR
+        self.avancar()
         if not self.verificar("C_IDENT"):
             linha, atomo, _ = self.atual()
             self.erros.append(
@@ -232,7 +215,7 @@ class Parser:
 
         while self.verificar("C_IDENT"):
             try:
-                # lista de identificadores: A, B, C
+                # Lista de identificadores: A, B, C
                 self.avancar()
                 while self.verificar("C_VIRGULA"):
                     self.avancar()
@@ -272,17 +255,17 @@ class Parser:
     def subrotina(self):
         # subrotina -> (PROCEDURE|FUNCTION) ident [params] [':' tipo] ';' bloco ';'
         eh_funcao = self.verificar("C_FUNCTION")
-        self.avancar()  # consome PROCEDURE ou FUNCTION
+        self.avancar()
         try:
             self.consumir("C_IDENT", "o nome da função/procedimento")
 
-            # parâmetros (opcionais)
+            # Parâmetros (opcionais)
             if self.verificar("C_ABRE_PARENTESES"):
                 self.avancar()
                 if not self.verificar("C_FECHA_PARENTESES"):
                     while True:
                         if self.verificar("C_VAR"):
-                            self.avancar()  # parâmetro por referência
+                            self.avancar()  # Parâmetro por referência
                         self.consumir("C_IDENT", "o nome do parâmetro")
                         while self.verificar("C_VIRGULA"):
                             self.avancar()
@@ -295,7 +278,7 @@ class Parser:
                         break
                 self.consumir("C_FECHA_PARENTESES", "')' fechando os parâmetros")
 
-            # função precisa declarar o tipo de retorno
+            # Função precisa declarar o tipo de retorno
             if eh_funcao:
                 self.consumir("C_DOIS_PONTOS", "':' antes do tipo de retorno da função")
                 self.tipo()
@@ -342,9 +325,8 @@ class Parser:
                 elif self.verificar("C_END", "C_PONTO", "C_EOF"):
                     break
                 else:
-                    # sobrou um token solto depois de um comando completo
-                    # (ex: 'Idade := Idade @ 3'): reporta UM erro e pula ate o
-                    # proximo ';' ou END, sem derrubar o resto do programa
+                    # Token solto depois de um comando completo (ex.: 'Idade := Idade @ 3'):
+                    # reporta um único erro e pula até o próximo ';' ou END.
                     linha, atomo, _ = self.atual()
                     self.erros.append(
                         ErroSintatico(linha, "';' ou END depois do comando", atomo)
@@ -379,7 +361,7 @@ class Parser:
             elif self.verificar("C_IDENT"):
                 self.atribuicao_ou_chamada()
             elif self.verificar("C_PONTO_E_VIRGULA", "C_END"):
-                pass  # comando vazio, permitido
+                pass  # Comando vazio é permitido
             else:
                 linha, atomo, _ = self.atual()
                 erro = ErroSintatico(linha, "um comando", atomo)
@@ -390,15 +372,15 @@ class Parser:
 
     def atribuicao_ou_chamada(self):
         # ident ':=' expressao | ident[(args)]
-        self.avancar()  # consome o identificador
+        self.avancar()
 
-        # índice de array: A[i]
+        # Índice de array: A[i]
         while self.verificar("C_ABRE_COLCHETE"):
             self.avancar()
             self.expressao()
             self.consumir("C_FECHA_COLCHETE", "']' fechando o índice")
 
-        # campo de record: A.B
+        # Campo de record: A.B
         while self.verificar("C_PONTO"):
             self.avancar()
             self.consumir("C_IDENT", "o nome do campo após o '.'")
@@ -415,18 +397,18 @@ class Parser:
                     self.expressao()
             self.consumir("C_FECHA_PARENTESES", "')' fechando os argumentos")
         elif self.verificar("C_IGUAL"):
-            # erro clássico: usar '=' onde deveria ser ':='
+            # Erro clássico: usar '=' no lugar de ':='
             linha, atomo, _ = self.atual()
             self.erros.append(
                 ErroSintatico(linha, "':=' para atribuir (o '=' é só comparação)", atomo)
             )
             self.avancar()
             self.expressao()
-        # ident sozinho também é válido (chamada de procedimento sem argumentos)
+        # Identificador sozinho também é válido (procedimento sem argumentos)
 
     def chamada_rotina(self):
         # WRITELN(...) | CLRSCR | DELAY(500) ...
-        self.avancar()  # consome o nome da rotina
+        self.avancar()
         if self.verificar("C_ABRE_PARENTESES"):
             self.avancar()
             if not self.verificar("C_FECHA_PARENTESES"):
@@ -438,7 +420,7 @@ class Parser:
 
     def comando_if(self):
         # if -> IF expressao THEN comando [ELSE comando]
-        self.avancar()  # consome IF
+        self.avancar()
         self.expressao()
         self.consumir("C_THEN", "a palavra THEN após a condição do IF")
         self.comando()
@@ -448,14 +430,14 @@ class Parser:
 
     def comando_while(self):
         # while -> WHILE expressao DO comando
-        self.avancar()  # consome WHILE
+        self.avancar()
         self.expressao()
         self.consumir("C_DO", "a palavra DO após a condição do WHILE")
         self.comando()
 
     def comando_for(self):
         # for -> FOR ident ':=' expressao (TO|DOWNTO) expressao DO comando
-        self.avancar()  # consome FOR
+        self.avancar()
         self.consumir("C_IDENT", "a variável de controle do FOR")
         self.consumir("C_ATRIBUICAO", "':=' após a variável do FOR")
         self.expressao()
@@ -472,7 +454,7 @@ class Parser:
 
     def comando_repeat(self):
         # repeat -> REPEAT comando {';' comando} UNTIL expressao
-        self.avancar()  # consome REPEAT
+        self.avancar()
         self.comando()
         while self.verificar("C_PONTO_E_VIRGULA"):
             self.avancar()
@@ -484,12 +466,12 @@ class Parser:
 
     def comando_case(self):
         # case -> CASE expressao OF {rotulo ':' comando ';'} END
-        self.avancar()  # consome CASE
+        self.avancar()
         self.expressao()
         self.consumir("C_OF", "a palavra OF após a expressão do CASE")
         while not self.verificar("C_END", "C_EOF"):
             try:
-                self.expressao()  # rótulo do case
+                self.expressao()  # Rótulo do CASE
                 while self.verificar("C_VIRGULA"):
                     self.avancar()
                     self.expressao()
@@ -513,10 +495,8 @@ class Parser:
             self.expressao_simples()
 
     def pode_iniciar_fator(self):
-        # true se o token atual e um dos que podem comecar um fator
-        # (usado pra saber se, depois de pular um caractere invalido no
-        # meio de uma conta, ainda sobrou "mais uma coisa" pra consumir
-        # como se um operador estivesse implicito ali)
+        # Indica se o token atual pode começar um fator. Usado depois de pular um
+        # caractere inválido no meio de uma conta, para não perder o próximo termo.
         s = self.simbolo()
         if s in ("C_IDENT", "C_INTEGER", "C_REAL", "C_STRING",
                   "C_TRUE", "C_FALSE", "C_NIL", "C_ABRE_PARENTESES", "C_NOT"):
@@ -530,7 +510,7 @@ class Parser:
     def expressao_simples(self):
         # simples -> [+|-] termo {(+|-|OR) termo}
         if self.verificar("C_MAIS", "C_MENOS"):
-            self.avancar()  # sinal unário
+            self.avancar()  # Sinal unário
         self.termo()
         while True:
             pulou_erro = self.simbolo().startswith("C_ERRO")
@@ -540,8 +520,8 @@ class Parser:
                 self.termo()
                 continue
             if pulou_erro and self.pode_iniciar_fator():
-                # caractere invalido no meio da conta: trata como se
-                # fosse um operador implicito, pra nao perder o proximo termo
+                # Caractere inválido no meio da conta: continua como se houvesse
+                # um operador implícito, para não perder o próximo termo.
                 self.termo()
                 continue
             break
@@ -563,7 +543,6 @@ class Parser:
 
     def fator(self):
         # fator -> ident[(args)] | número | string | '(' expressao ')' | NOT fator
-        # (+ token de erro lexico, absorvido quieto pra nao gerar erro em cascata)
         if self.verificar("C_IDENT"):
             self.avancar()
             while self.verificar("C_ABRE_COLCHETE"):
@@ -587,7 +566,7 @@ class Parser:
             self.avancar()
             return
 
-        # funções que podem aparecer dentro de expressão: LENGTH(x), RANDOM(10)...
+        # Funções que podem aparecer em expressões: LENGTH(x), RANDOM(10)...
         if self.simbolo() in ROTINAS or self.verificar("C_KEYPRESSED", "C_LENGTH",
                                                        "C_RANDOM", "C_SIZEOF",
                                                        "C_WHEREX", "C_WHEREY",
@@ -616,9 +595,8 @@ class Parser:
             self.fator()
             return
 
-        # token que o LEXICO ja marcou como invalido (numero colado com
-        # letra, string nao fechada...): absorve no lugar de valor, sem
-        # levantar erro sintatico - o erro ja foi contabilizado no lexico.
+        # Token que o léxico já marcou como inválido (ex.: número colado com letra):
+        # é absorvido no lugar de um valor, pois o erro já foi contado no léxico.
         if self.simbolo().startswith("C_ERRO"):
             self.avancar()
             return
@@ -630,11 +608,11 @@ class Parser:
 
 
     def analisar(self):
-        # roda a análise completa e devolve a lista de erros encontrados
+        # Roda a análise completa e devolve os erros encontrados
         try:
             self.programa()
         except ErroSintatico:
-            pass  # já foi registrado em self.erros
+            pass  # Já foi registrado em self.erros
         except RecursionError:
             self.erros.append(
                 ErroSintatico(self.atual()[0], "estrutura válida", "(análise interrompida)")
@@ -746,7 +724,7 @@ def escapar(texto):
 
 
 def save_html_todos(resultados, path):
-    # Um unico HTML com todos os arquivos analisados, um bloco por arquivo.
+    # Um único HTML com todos os arquivos analisados, um bloco por arquivo.
     # resultados = lista de (nome_arquivo, erros_sint, erros_lex, total_tokens)
     import datetime
     agora = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
@@ -853,7 +831,7 @@ def save_html_todos(resultados, path):
 
 
 def expandir_arquivos(padroes):
-    # o PowerShell nao expande '*.pas' sozinho, entao expandimos aqui
+    # O PowerShell não expande '*.pas' sozinho, então expandimos aqui
     arquivos = []
     for padrao in padroes:
         if any(c in padrao for c in "*?["):
@@ -892,7 +870,7 @@ def main():
 
     pasta = os.path.dirname(arquivos[0])
     if len(arquivos) == 1:
-        # um arquivo so: "Analisador Sintatico - NomeDoArquivo.html"
+        # Um arquivo só: "Analisador Sintatico - NomeDoArquivo.html"
         caminho_html = args.html
         if not caminho_html:
             base = os.path.splitext(os.path.basename(arquivos[0]))[0]
@@ -900,12 +878,12 @@ def main():
         nome, erros_sint, erros_lex, ntok = resultados[0]
         save_html(erros_sint, erros_lex, caminho_html, nome, ntok)
     else:
-        # varios arquivos: UM unico HTML com todos juntos
+        # Vários arquivos: um único HTML com todos juntos
         caminho_html = args.html or os.path.join(pasta, "Analisador Sintatico - Todos os Testes.html")
         save_html_todos(resultados, caminho_html)
     print(f"Relatório HTML salvo em: {caminho_html}")
 
-    # código de saída: 0 = tudo certo, 1 = achou erro (útil pra automatizar)
+    # Código de saída: 0 = tudo certo, 1 = achou erro (útil para automatizar)
     tem_erro = any(r[1] or r[2] for r in resultados)
     sys.exit(1 if tem_erro else 0)
 
