@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Analisador Sintatico - Todos os Testes</title>
+<style>
+  body { font-family:'Segoe UI',Arial,sans-serif; background:#0f1117; color:#e6e6e6; padding:32px; }
+  h1 { margin-bottom:4px; }
+  h2 { margin-top:48px; font-size:22px; color:#e6e6e6; border-bottom:1px solid #2a2d3a; padding-bottom:8px; }
+  h3 { margin-top:24px; font-size:16px; color:#c9cdd4; }
+  .sub { color:#9aa0a6; margin-bottom:24px; }
+  .resumo { display:flex; gap:16px; margin-bottom:24px; flex-wrap:wrap; }
+  .card { background:#1a1d27; border-radius:10px; padding:14px 20px; min-width:150px; }
+  .card .num { font-size:28px; font-weight:700; }
+  .card .label { color:#9aa0a6; font-size:13px; }
+  table { border-collapse:collapse; width:100%; background:#1a1d27;
+           border-radius:10px; overflow:hidden; margin-top:12px; }
+  th, td { padding:9px 14px; text-align:left; border-bottom:1px solid #2a2d3a; font-size:14px; }
+  th { background:#22263a; }
+  code { background:#22263a; padding:2px 6px; border-radius:4px; color:#d4a72c; }
+  .ok { background:#14331c; border-left:4px solid #2fb344; padding:16px 20px;
+         border-radius:8px; margin-top:12px; font-size:15px; }
+</style>
+</head>
+<body>
+  <h1>Analisador Sintatico &mdash; Turbo Pascal</h1>
+  <div class="sub">4 arquivos analisados &nbsp;|&nbsp; Gerado em 29/09/2026 20:16</div>
+
+  <div class="resumo">
+    <div class="card"><div class="num">4</div><div class="label">Arquivos</div></div>
+    <div class="card"><div class="num" style="color:#e5484d">11</div><div class="label">Erros sintáticos (total)</div></div>
+    <div class="card"><div class="num" style="color:#d4a72c">5</div><div class="label">Erros léxicos (total)</div></div>
+  </div>
+
+  <table>
+    <thead><tr><th>ARQUIVO</th><th>ÁTOMOS</th><th>ERROS SINTÁTICOS</th><th>ERROS LÉXICOS</th></tr></thead>
+    <tbody><tr><td>Teste 1 - Codigo Correto.pas</td><td>143</td><td style="color:#2fb344">0</td><td style="color:#2fb344">0</td></tr><tr><td>Teste 2 - Codigo com Erros de Sintaxe.pas</td><td>58</td><td style="color:#e5484d">8</td><td style="color:#2fb344">0</td></tr><tr><td>Teste 3 - Codigo Grande (Lexico).pas</td><td>260</td><td style="color:#e5484d">3</td><td style="color:#d4a72c">4</td></tr><tr><td>Projeto Automatos.pas</td><td>58</td><td style="color:#2fb344">0</td><td style="color:#d4a72c">1</td></tr></tbody>
+  </table>
+  
+  <section>
+    <h2>Teste 1 - Codigo Correto.pas</h2>
+    <div class="resumo">
+      <div class="card"><div class="num">143</div><div class="label">Átomos analisados</div></div>
+      <div class="card"><div class="num" style="color:#2fb344">0</div><div class="label">Erros sintáticos</div></div>
+      <div class="card"><div class="num" style="color:#2fb344">0</div><div class="label">Erros léxicos</div></div>
+    </div>
+    <div class="ok">Nenhum erro de sintaxe encontrado. A estrutura do programa está correta.</div>
+    
+  </section>
+  <section>
+    <h2>Teste 2 - Codigo com Erros de Sintaxe.pas</h2>
+    <div class="resumo">
+      <div class="card"><div class="num">58</div><div class="label">Átomos analisados</div></div>
+      <div class="card"><div class="num" style="color:#e5484d">8</div><div class="label">Erros sintáticos</div></div>
+      <div class="card"><div class="num" style="color:#2fb344">0</div><div class="label">Erros léxicos</div></div>
+    </div>
+    
+        <h3>Erros sintáticos</h3>
+        <table>
+          <thead><tr><th>LINHA</th><th>ESPERAVA</th><th>ENCONTROU</th></tr></thead>
+          <tbody><tr><td>4</td><td>':' antes do tipo da variável</td><td><code>INTEGER</code></td></tr><tr><td>5</td><td>um tipo (INTEGER, REAL, STRING...)</td><td><code>;</code></td></tr><tr><td>8</td><td>':=' para atribuir (o '=' é só comparação)</td><td><code>=</code></td></tr><tr><td>11</td><td>a palavra THEN após a condição do IF</td><td><code>WRITELN</code></td></tr><tr><td>13</td><td>':=' após a variável do FOR</td><td><code>1</code></td></tr><tr><td>17</td><td>a palavra DO após a condição do WHILE</td><td><code>M</code></td></tr><tr><td>19</td><td>')' fechando a chamada</td><td><code>;</code></td></tr><tr><td>23</td><td>a palavra UNTIL fechando o REPEAT</td><td><code>END</code></td></tr></tbody>
+        </table>
+    
+  </section>
+  <section>
+    <h2>Teste 3 - Codigo Grande (Lexico).pas</h2>
+    <div class="resumo">
+      <div class="card"><div class="num">260</div><div class="label">Átomos analisados</div></div>
+      <div class="card"><div class="num" style="color:#e5484d">3</div><div class="label">Erros sintáticos</div></div>
+      <div class="card"><div class="num" style="color:#d4a72c">4</div><div class="label">Erros léxicos</div></div>
+    </div>
+    
+        <h3>Erros sintáticos</h3>
+        <table>
+          <thead><tr><th>LINHA</th><th>ESPERAVA</th><th>ENCONTROU</th></tr></thead>
+          <tbody><tr><td>46</td><td>';' ou END depois do comando</td><td><code>@</code></td></tr><tr><td>84</td><td>a palavra reservada END fechando o BEGIN</td><td><code>&lt;fim do arquivo&gt;</code></td></tr><tr><td>84</td><td>'.' no fim do programa</td><td><code>&lt;fim do arquivo&gt;</code></td></tr></tbody>
+        </table>
+    
+        <h3>Erros léxicos</h3>
+        <table>
+          <thead><tr><th>LINHA</th><th>ÁTOMO</th><th>PROBLEMA</th></tr></thead>
+          <tbody><tr><td>36</td><td><code>42B</code></td><td>C_ERRO_NUMERO_COM_LETRA</td></tr><tr><td>39</td><td><code>18X</code></td><td>C_ERRO_NUMERO_COM_LETRA</td></tr><tr><td>45</td><td><code>#</code></td><td>C_ERRO_CARACTERE_INVALIDO</td></tr><tr><td>84</td><td><code>'esqueci de fechar;
+END.
+</code></td><td>C_ERRO_STRING_NAO_FECHADA</td></tr></tbody>
+        </table>
+  </section>
+  <section>
+    <h2>Projeto Automatos.pas</h2>
+    <div class="resumo">
+      <div class="card"><div class="num">58</div><div class="label">Átomos analisados</div></div>
+      <div class="card"><div class="num" style="color:#2fb344">0</div><div class="label">Erros sintáticos</div></div>
+      <div class="card"><div class="num" style="color:#d4a72c">1</div><div class="label">Erros léxicos</div></div>
+    </div>
+    <div class="ok">Nenhum erro de sintaxe encontrado. A estrutura do programa está correta.</div>
+    
+        <h3>Erros léxicos</h3>
+        <table>
+          <thead><tr><th>LINHA</th><th>ÁTOMO</th><th>PROBLEMA</th></tr></thead>
+          <tbody><tr><td>8</td><td><code>123A</code></td><td>C_ERRO_NUMERO_COM_LETRA</td></tr></tbody>
+        </table>
+  </section>
+</body>
+</html>
